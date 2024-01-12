@@ -18,6 +18,7 @@ package com.eed3si9n.jarjar;
 
 import com.eed3si9n.jarjar.misplaced.MisplacedClassProcessorFactory;
 import com.eed3si9n.jarjar.util.*;
+import java.util.function.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -25,9 +26,13 @@ import java.util.*;
 class MainProcessor implements JarProcessor
 {
     private final boolean verbose;
-    private final JarProcessorChain chain;
+
+    private final Function<PackageRemapper, JarProcessor> chain;
+
     private final KeepProcessor kp;
     private final Map<String, String> renames = new HashMap<String, String>();
+
+    private final Supplier<PackageRemapper> packageRemapper;
 
     public MainProcessor(List<PatternElement> patterns, boolean verbose, boolean skipManifest) {
         this(patterns, verbose, skipManifest, null);
@@ -59,26 +64,28 @@ class MainProcessor implements JarProcessor
             }
         }
 
-        PackageRemapper pr = new PackageRemapper(ruleList, verbose);
+        this.packageRemapper = () -> new PackageRemapper(ruleList, verbose);
         kp = keepList.isEmpty() ? null : new KeepProcessor(keepList);
 
-        List<JarProcessor> processors = new ArrayList<JarProcessor>();
-        if (skipManifest)
-            processors.add(ManifestProcessor.getInstance());
-        if (kp != null)
-            processors.add(kp);
+        this.chain = (pr) -> {
+            List<JarProcessor> processors = new ArrayList<JarProcessor>();
+            if (skipManifest)
+                processors.add(ManifestProcessor.getInstance());
+            if (kp != null)
+                processors.add(kp);
 
-        JarProcessor misplacedClassProcessor = MisplacedClassProcessorFactory.getInstance()
-            .getProcessorForName(misplacedClassStrategy);
+            JarProcessor misplacedClassProcessor = MisplacedClassProcessorFactory.getInstance()
+                    .getProcessorForName(misplacedClassStrategy);
 
-        processors.add(new ZapProcessor(zapList));
-        processors.add(misplacedClassProcessor);
-        processors.add(new JarTransformerChain(new RemappingClassTransformer[] {
-            new RemappingClassTransformer(pr)
-        }));
-        processors.add(new MethodSignatureProcessor(pr));
-        processors.add(new ResourceProcessor(pr));
-        chain = new JarProcessorChain(processors.toArray(new JarProcessor[processors.size()]));
+            processors.add(new ZapProcessor(zapList));
+            processors.add(misplacedClassProcessor);
+            processors.add(new JarTransformerChain(new RemappingClassTransformer[]{
+                    new RemappingClassTransformer(pr)
+            }));
+            processors.add(new MethodSignatureProcessor(pr));
+            processors.add(new ResourceProcessor(pr));
+            return new JarProcessorChain(processors.toArray(new JarProcessor[processors.size()]));
+        };
     }
 
     public void strip(File file) throws IOException {
@@ -112,18 +119,25 @@ class MainProcessor implements JarProcessor
      * @throws IOException
      */
     public boolean process(EntryStruct struct) throws IOException {
-        String name = struct.name;
-        boolean keepIt = chain.process(struct);
-        if (keepIt) {
-            if (!name.equals(struct.name)) {
-                if (kp != null)
-                    renames.put(name, struct.name);
-                if (verbose)
-                    System.err.println("Renamed " + name + " -> " + struct.name);
-            }
-        } else {
+        EntryStruct origStruct = struct.copy();
+        PackageRemapper pr = packageRemapper.get();
+        boolean keepIt = chain.apply(pr).process(struct);
+
+        if (!keepIt) {
             if (verbose)
-                System.err.println("Removed " + name);
+                System.err.println("Removed " + origStruct.name);
+            return keepIt;
+        }
+
+        if (!pr.modified) {
+            struct.assign(origStruct);
+        }
+
+        if (!origStruct.name.equals(struct.name)) {
+            if (kp != null)
+                renames.put(origStruct.name, struct.name);
+            if (verbose)
+                System.err.println("Renamed " + origStruct.name + " -> " + struct.name);
         }
         return keepIt;
     }
