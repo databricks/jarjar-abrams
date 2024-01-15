@@ -130,7 +130,9 @@ class MainProcessor implements JarProcessor
         }
 
         if (!pr.modified) {
-            struct.assign(origStruct);
+            // copy only data field.
+            // Specifically, don't copy name for the sake of Misplaced class processors.
+            struct.data = origStruct.data;
         }
 
         if (!origStruct.name.equals(struct.name)) {
