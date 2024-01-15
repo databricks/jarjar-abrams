@@ -34,6 +34,8 @@ class PackageRemapper extends Remapper
     private final Map<Object, String> valueCache = new HashMap<Object, String>();
     private final boolean verbose;
 
+    protected boolean modified = false;
+
     public PackageRemapper(List<Rule> ruleList, boolean verbose) {
         this.verbose = verbose;
         wildcards = PatternElement.createWildcards(ruleList);
@@ -130,8 +132,11 @@ class PackageRemapper extends Remapper
     private String replaceHelper(String value) {
         for (Wildcard wildcard : wildcards) {
             String test = wildcard.replace(value);
-            if (test != null)
+            if (test != null) {
+                if (test != value)
+                    this.modified = true;
                 return test;
+            }
         }
         return value;
     }
