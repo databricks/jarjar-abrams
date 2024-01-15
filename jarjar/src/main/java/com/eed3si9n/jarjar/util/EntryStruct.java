@@ -24,10 +24,10 @@ public class EntryStruct {
 
     public EntryStruct copy() {
         EntryStruct result = new EntryStruct();
-        data = other.data;
-        name = other.name;
-        time = other.time;
-        skipTransform = other.skipTransform;
+        result.data = data;
+        result.name = name;
+        result.time = time;
+        result.skipTransform = skipTransform;
         return result;
     }
 }
