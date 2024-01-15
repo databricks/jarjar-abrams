@@ -24,14 +24,10 @@ public class EntryStruct {
 
     public EntryStruct copy() {
         EntryStruct result = new EntryStruct();
-        result.assign(this);
-        return result;
-    }
-
-    public void assign(EntryStruct other) {
         data = other.data;
         name = other.name;
         time = other.time;
         skipTransform = other.skipTransform;
+        return result;
     }
 }
