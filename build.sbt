@@ -6,7 +6,7 @@ ThisBuild / organizationName := "eed3si9n"
 ThisBuild / organizationHomepage := Some(url("http://eed3si9n.com/"))
 ThisBuild / version := {
   val old = (ThisBuild / version).value
-  if ((ThisBuild / isSnapshot).value) "1.9.0-db-SNAPSHOT"
+  if ((ThisBuild / isSnapshot).value) "1.9.0-db3-SNAPSHOT"
   else old
 }
 ThisBuild / description := "utility to shade Scala libraries"

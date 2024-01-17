@@ -20,7 +20,7 @@ public class UnmodifiedTest
         rule.setPattern("com.abc");
         rule.setResult("com.def");
 
-        MainProcessor mp = new MainProcessor(List.of(rule), false, false, "move");
+        MainProcessor mp = new MainProcessor(Arrays.asList(rule), false, false, "move");
 
         EntryStruct entryStruct = new EntryStruct();
         entryStruct.name = "BigtableIO$Write.class";
